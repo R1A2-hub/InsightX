@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="128dp"
+    android:height="128dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Rounded Background Container -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M24,16 L104,16 A16,16 0 0,1 120,32 L120,96 A16,16 0 0,1 104,112 L24,112 A16,16 0 0,1 8,96 L8,32 A16,16 0 0,1 24,16 Z" />
+    <!-- Activity Pulse Graph Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M28,68 L44,68 L54,42 L72,86 L84,56 L94,68 L102,68" />
+    <!-- Analytics Sparkle Node -->
+    <path
+        android:fillColor="#A5B4FC"
+        android:pathData="M98,34 L101,24 L104,34 L114,37 L104,40 L101,50 L98,40 L88,37 Z" />
+</vector>

@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { BottomNav } from './components/BottomNav';
 import { EmptyState } from './components/EmptyState';
 import { Sidebar } from './components/Sidebar';
+import { SplashScreenView } from './components/SplashScreenView';
 import { TopBar } from './components/TopBar';
 import { AIInsightsPage } from './pages/AIInsightsPage';
 import { AnalystChatPage } from './pages/AnalystChatPage';
@@ -11,6 +13,10 @@ import { DataQualityPage } from './pages/DataQualityPage';
 import { DatasetsPage } from './pages/DatasetsPage';
 import { ForecastsPage } from './pages/ForecastsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import {
+  initializeAndroidEnvironment,
+  registerAndroidBackButtonHandler,
+} from './services/androidService';
 import { apiService } from './services/api';
 import {
   DatasetAnalysisBundle,
@@ -36,6 +42,7 @@ export default function App() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [initialChatQuestion, setInitialChatQuestion] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const [showSplash, setShowSplash] = useState<boolean>(true);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ id: Date.now(), message, type });
@@ -49,6 +56,22 @@ export default function App() {
     }, 4500);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // Initialize Android native status bar, splash screen, and hardware back button
+  useEffect(() => {
+    initializeAndroidEnvironment();
+
+    const cleanupBackButton = registerAndroidBackButtonHandler({
+      isDrawerOpen: () => mobileOpen,
+      closeDrawer: () => setMobileOpen(false),
+      canNavigateBack: () => activeSection !== 'dashboard',
+      navigateBack: () => setActiveSection('dashboard'),
+    });
+
+    return () => {
+      cleanupBackButton();
+    };
+  }, [mobileOpen, activeSection]);
 
   // Initial data loading
   useEffect(() => {
@@ -68,6 +91,9 @@ export default function App() {
           if (isMounted && activeRes.bundle) {
             setBundle(activeRes.bundle);
             setIsLoading(false);
+            setTimeout(() => {
+              if (isMounted) setShowSplash(false);
+            }, 600);
             return;
           }
         }
@@ -93,6 +119,9 @@ export default function App() {
       } finally {
         if (isMounted) {
           setIsLoading(false);
+          setTimeout(() => {
+            if (isMounted) setShowSplash(false);
+          }, 600);
         }
       }
     }
@@ -161,14 +190,17 @@ export default function App() {
   };
 
   const handleDeleteDataset = async (datasetId: string) => {
+    setIsProcessing(true);
     try {
       const res = await apiService.deleteDataset(datasetId);
       setBundle(res.bundle);
       setDatasets(res.datasets);
-      showToast('Dataset removed', 'info');
+      showToast('Dataset deleted', 'info');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to delete dataset';
       showToast(msg, 'error');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -179,60 +211,37 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
-      {/* Toast Notification */}
+      {/* Animated Splash Screen */}
+      {showSplash && <SplashScreenView isExiting={!isLoading} />}
+
+      {/* Global Toast Notification */}
       {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-lg border px-4 py-3 text-xs font-medium shadow-lg backdrop-blur-sm transition-all duration-200 ${
-            toast.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50/95 text-emerald-900'
-              : toast.type === 'error'
-              ? 'border-rose-200 bg-rose-50/95 text-rose-900'
-              : 'border-indigo-200 bg-indigo-50/95 text-indigo-900'
-          }`}
-        >
-          {toast.type === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
-          {toast.type === 'error' && <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />}
-          {toast.type === 'info' && <Loader2 className="h-4 w-4 text-indigo-600 animate-spin shrink-0" />}
-          <span>{toast.message}</span>
+        <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl lg:bottom-6">
+          {toast.type === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+          {toast.type === 'error' && <AlertCircle className="h-4 w-4 text-rose-600" />}
+          {toast.type === 'info' && <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />}
+          <span className="text-xs font-medium text-slate-800">{toast.message}</span>
           <button
+            type="button"
             onClick={() => setToast(null)}
-            className="ml-2 text-slate-400 hover:text-slate-600 focus:outline-none"
-            aria-label="Dismiss toast"
+            className="ml-2 text-slate-400 hover:text-slate-600"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
-      {/* Global Processing Overlay */}
-      {isProcessing && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-[2px]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl flex flex-col items-center max-w-sm text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-3 border-indigo-600 border-t-transparent mb-4" />
-            <h3 className="text-sm font-semibold text-slate-900">Deterministic Analytics Pipeline Running</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Validating columns, cleaning rows, deriving metrics, running IQR anomalies & OLS regression...
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Sidebar Navigation */}
       <Sidebar
         activeSection={activeSection}
-        onSelectSection={(section) => {
-          setActiveSection(section);
-          setMobileOpen(false);
-        }}
+        onSelectSection={setActiveSection}
         hasActiveDataset={Boolean(bundle)}
         anomalyCount={bundle?.anomalies.length || 0}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />
 
-      {/* Main App Container */}
+      {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar
           bundle={bundle}
@@ -244,7 +253,7 @@ export default function App() {
           onOpenMobileMenu={() => setMobileOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+        <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 pb-24 lg:pb-8">
           {isLoading ? (
             <div className="flex h-96 flex-col items-center justify-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
@@ -312,6 +321,14 @@ export default function App() {
             </>
           )}
         </main>
+
+        {/* Bottom Navigation for Android & Mobile Screen Form Factors */}
+        <BottomNav
+          activeSection={activeSection}
+          onNavigate={setActiveSection}
+          hasActiveDataset={Boolean(bundle)}
+          anomalyCount={bundle?.anomalies.length || 0}
+        />
       </div>
     </div>
   );

@@ -176,9 +176,134 @@ If you wish to run the standalone Python FastAPI backend:
 
 ---
 
+## Dual-Client Architecture (Web & Android)
+
+InsightX provides two clients backed by a single, shared deterministic analytics and AI engine:
+
+```
+┌────────────────────────────────────────────────────────┐
+│                      Clients                           │
+│  ┌──────────────────────┐    ┌──────────────────────┐  │
+│  │     Web Browser      │    │  Android Application │  │
+│  │ (Desktop & Mobile)   │    │(Capacitor native APK)│  │
+│  └──────────┬───────────┘    └──────────┬───────────┘  │
+└─────────────┼───────────────────────────┼──────────────┘
+              │                           │
+              └─────────────┬─────────────┘
+                            ▼
+              ┌───────────────────────────┐
+              │    Central Backend API    │
+              │  (Node / Express / CORS)  │
+              └─────────────┬─────────────┘
+                            ▼
+       ┌────────────────────────────────────────┐
+       │   Deterministic Analytics Pipeline     │
+       │  (Upload, Clean, KPIs, Trend, Forecast)│
+       └────────────────────┬───────────────────┘
+                            ▼
+       ┌────────────────────────────────────────┐
+       │       Evidence Builder (Data Only)     │
+       └────────────────────┬───────────────────┘
+                            ▼
+       ┌────────────────────────────────────────┐
+       │     Google Gemini 3.8 Flash Layer      │
+       │    (Explains Verified Numbers Only)    │
+       └────────────────────────────────────────┘
+```
+
+The web application remains 100% operational at:
+**`https://insightx-ai-data-analyst-20453368826.asia-southeast1.run.app`**
+
+---
+
+## Android Project Details
+
+- **Application Name**: `InsightX — AI Data Analyst`
+- **Application ID / Package**: `com.insightx.aidataanalyst`
+- **Framework**: Capacitor 8 + Android Gradle
+- **Target Android SDK**: API 36 (Android 15+)
+- **Minimum Android SDK**: API 24 (Android 7.0+)
+- **Android Features**:
+  - File picker for `.csv` and `.xlsx` upload
+  - Native hardware Back Button support (closes drawer, navigates to Dashboard, or exits app)
+  - Dark status bar matching InsightX slate branding (`#0f172a`)
+  - Adaptive launcher icons (`ic_launcher` and `ic_launcher_round`)
+  - Native splash screen with InsightX icon and "Compute first. Explain second."
+  - Mobile bottom navigation bar for touch optimization
+
+---
+
+## Android Build & Packaging Guide
+
+### Prerequisites
+- Node.js 22+
+- Java JDK 17 or 21 (`export JAVA_HOME=/path/to/jdk`)
+- Android Studio / Android SDK (with Command-line Tools and Platform 36 installed)
+
+### 1. Build and Sync Web Assets to Android
+Whenever frontend code changes:
+```bash
+npm run android:sync
+```
+This builds the production bundle and copies assets into `android/app/src/main/assets/public`.
+
+### 2. Generate Debug APK (for Testing)
+```bash
+cd android
+./gradlew assembleDebug
+```
+The output file is located at:
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+### 3. Install Debug APK on an Android Device or Emulator
+```bash
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 4. Generate Production Release APK
+```bash
+cd android
+./gradlew assembleRelease
+```
+The output file is located at:
+`android/app/build/outputs/apk/release/app-release-unsigned.apk`
+
+### 5. Generate Signed Android App Bundle (.aab) for Google Play
+Google Play Console requires an `.aab` (Android App Bundle):
+```bash
+cd android
+./gradlew bundleRelease
+```
+The output bundle is located at:
+`android/app/build/outputs/bundle/release/app-release.aab`
+
+#### Signing the App Bundle for Google Play
+To sign the `.aab` for Google Play release:
+1. Generate your release keystore (if not already created):
+   ```bash
+   keytool -genkey -v -keystore insightx-release.keystore -alias insightx -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Sign using `jarsigner`:
+   ```bash
+   jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore insightx-release.keystore android/app/build/outputs/bundle/release/app-release.aab insightx
+   ```
+3. Upload the signed `app-release.aab` to Google Play Console.
+
+### 6. Local Testing & Emulator Configuration
+- **Live Cloud Run Mode (Default)**: In the Android app, API requests automatically connect to the production Cloud Run backend: `https://insightx-ai-data-analyst-20453368826.asia-southeast1.run.app`.
+- **Local Testing Mode (Android Emulator)**: When testing against a local dev server running on your computer:
+  1. Open the Android app.
+  2. Navigate to **Settings** (`/settings`).
+  3. Under **Backend API Connection**, enter `http://10.0.2.2:3000` (the standard Android emulator alias for localhost).
+  4. Tap **Apply** and **Test Connection**. The ping indicator will confirm connectivity with latency in milliseconds.
+  5. Tap **Reset** at any time to return to the live production Cloud Run backend.
+
+---
+
 ## Architectural Rules
 
 - **Zero Invention**: Gemini never computes math or summarizes raw row arrays directly.
 - **Evidence-Only Context**: The AI layer only receives pre-calculated KPIs, dimension aggregates, and statistical anomalies as serialized evidence strings.
 - **Graceful Degradation**: If an AI request fails, exceeds quotas, or is unconfigured, the application falls back cleanly to deterministic template explanations without UI breakage.
 - **PostgreSQL Ready**: The storage layer is decoupled into `IDatasetRepository`, allowing migration from in-memory maps to PostgreSQL with zero changes to analytics or AI layers.
+

@@ -66,12 +66,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }}
             className="flex items-center gap-2.5 text-left focus:outline-none"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-              <Activity className="h-4 w-4" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+              <Activity className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              InsightX
-            </span>
+            <div className="flex flex-col">
+              <span className="text-base font-bold tracking-tight text-slate-900 leading-tight">
+                InsightX
+              </span>
+              <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">
+                AI Data Analyst
+              </span>
+            </div>
           </button>
         </div>
 

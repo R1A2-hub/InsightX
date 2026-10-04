@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import {
   ChatResponsePayload,
   ComparisonAnalysisResult,
@@ -7,6 +8,39 @@ import {
   MetricType,
   SamplePresetMeta,
 } from '../types/analytics';
+
+export const DEFAULT_PRODUCTION_API = 'https://insightx-ai-data-analyst-20453368826.asia-southeast1.run.app';
+
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('insightx_api_base_url');
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  }
+
+  const envUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // When running inside native Android or iOS app container
+  if (Capacitor.isNativePlatform()) {
+    return DEFAULT_PRODUCTION_API;
+  }
+
+  // When running in standard web browser, use relative URL (same-origin)
+  return '';
+}
+
+export function setCustomApiBaseUrl(url: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (!url || !url.trim()) {
+    localStorage.removeItem('insightx_api_base_url');
+  } else {
+    localStorage.setItem('insightx_api_base_url', url.trim().replace(/\/+$/, ''));
+  }
+}
 
 async function handleResponse<T>(res: Response): Promise<T> {
   const data = await res.json().catch(() => ({}));
@@ -22,19 +56,19 @@ export const apiService = {
     activeDatasetId: string | null;
     samples: SamplePresetMeta[];
   }> {
-    const res = await fetch('/api/datasets');
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets`);
     return handleResponse(res);
   },
 
   async getActiveDataset(): Promise<{ bundle: DatasetAnalysisBundle | null }> {
-    const res = await fetch('/api/datasets/active');
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets/active`);
     return handleResponse(res);
   },
 
   async uploadDatasetFile(file: File): Promise<{ bundle: DatasetAnalysisBundle }> {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch('/api/datasets/upload', {
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -42,7 +76,7 @@ export const apiService = {
   },
 
   async loadSampleDataset(sampleId = 'sample-enterprise'): Promise<{ bundle: DatasetAnalysisBundle }> {
-    const res = await fetch('/api/datasets/sample', {
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets/sample`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sampleId }),
@@ -51,7 +85,7 @@ export const apiService = {
   },
 
   async activateDataset(datasetId: string): Promise<{ bundle: DatasetAnalysisBundle }> {
-    const res = await fetch(`/api/datasets/${encodeURIComponent(datasetId)}/activate`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets/${encodeURIComponent(datasetId)}/activate`, {
       method: 'POST',
     });
     return handleResponse(res);
@@ -61,14 +95,14 @@ export const apiService = {
     bundle: DatasetAnalysisBundle | null;
     datasets: DatasetListItem[];
   }> {
-    const res = await fetch(`/api/datasets/${encodeURIComponent(datasetId)}`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/datasets/${encodeURIComponent(datasetId)}`, {
       method: 'DELETE',
     });
     return handleResponse(res);
   },
 
   async askAnalystQuestion(question: string, datasetId?: string): Promise<ChatResponsePayload> {
-    const res = await fetch('/api/chat/ask', {
+    const res = await fetch(`${getApiBaseUrl()}/api/chat/ask`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, datasetId }),
@@ -83,7 +117,7 @@ export const apiService = {
     itemB: string;
     datasetId?: string;
   }): Promise<{ comparison: ComparisonAnalysisResult }> {
-    const res = await fetch('/api/analytics/compare', {
+    const res = await fetch(`${getApiBaseUrl()}/api/analytics/compare`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
