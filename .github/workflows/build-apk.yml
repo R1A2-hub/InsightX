@@ -8,29 +8,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
+      # 1. Checkout project
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js
+      # 2. Setup Node.js 22
+      # Capacitor CLI requires Node.js >= 22
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       # 3. Install project dependencies
+      # --legacy-peer-deps handles the Vite/esbuild dependency conflict
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
       # 4. Install react-is required by Recharts
-      - name: Install missing Recharts dependency
+      - name: Install Recharts dependency
         run: npm install react-is --legacy-peer-deps
 
-      # 5. Build web app and sync Capacitor Android project
+      # 5. Build web app and sync Capacitor Android
       - name: Build and sync Android
         run: npm run android:sync
 
-      # 6. Setup Java
+      # 6. Setup Java 21 for Android/Gradle
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -46,7 +48,7 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug
 
-      # 9. Upload APK
+      # 9. Upload APK to GitHub Actions
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
