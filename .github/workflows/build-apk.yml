@@ -19,31 +19,34 @@ jobs:
           node-version: 20
 
       # 3. Install project dependencies
-      # --legacy-peer-deps fixes the Vite/esbuild peer dependency conflict
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      # 4. Build web app and sync it into Android/Capacitor
+      # 4. Install react-is required by Recharts
+      - name: Install missing Recharts dependency
+        run: npm install react-is --legacy-peer-deps
+
+      # 5. Build web app and sync Capacitor Android project
       - name: Build and sync Android
         run: npm run android:sync
 
-      # 5. Setup Java for Android/Gradle
+      # 6. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # 6. Setup Android SDK
+      # 7. Setup Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 7. Build Debug APK
+      # 8. Build Debug APK
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug
 
-      # 8. Upload APK as GitHub Actions artifact
+      # 9. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
