@@ -13,7 +13,6 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. Setup Node.js 22
-      # Capacitor requires Node.js >= 22
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -52,17 +51,22 @@ jobs:
           sdkmanager "platforms;android-36"
           sdkmanager "build-tools;36.0.0"
 
-      # 9. Give Gradle wrapper execute permission
+      # 9. Remove duplicate splash PNG
+      - name: Fix duplicate splash resource
+        run: |
+          rm -f android/app/src/main/res/drawable/splash.png
+
+      # 10. Make Gradle executable
       - name: Make Gradle executable
         working-directory: android
         run: chmod +x gradlew
 
-      # 10. Build Debug APK
+      # 11. Build Debug APK
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug
 
-      # 11. Upload APK
+      # 12. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
