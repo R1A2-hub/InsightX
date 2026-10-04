@@ -20,7 +20,6 @@ jobs:
           node-version: 22
 
       # 3. Install project dependencies
-      # Handles the Vite/esbuild peer dependency conflict
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
@@ -45,7 +44,7 @@ jobs:
         with:
           packages: ''
 
-      # 8. Install Android SDK required by the project
+      # 8. Install required Android SDK packages
       - name: Install Android SDK 36
         run: |
           yes | sdkmanager --licenses || true
@@ -53,12 +52,17 @@ jobs:
           sdkmanager "platforms;android-36"
           sdkmanager "build-tools;36.0.0"
 
-      # 9. Build Debug APK
+      # 9. Give Gradle wrapper execute permission
+      - name: Make Gradle executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      # 10. Build Debug APK
       - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug
 
-      # 10. Upload APK
+      # 11. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
