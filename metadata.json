@@ -1,0 +1,6 @@
+{
+  "name": "InsightX — AI Data Analyst",
+  "description": "Deterministic business intelligence and AI data analytics platform for SMBs. Upload CSV or Excel sales datasets to clean, profile, calculate metrics, forecast, detect anomalies, and query with AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
